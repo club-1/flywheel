@@ -12,8 +12,10 @@ jobs:
     - php: 5.4
       dist: trusty
 
-install:
+before_install:
   - if [[ ${TRAVIS_PHP_VERSION:0:3} < "7.1" ]]; then rm composer.lock; fi
+
+install:
   - composer install
 
 script:
@@ -25,4 +27,4 @@ after_script:
 
 cache:
   directories:
-    - $HOME/.composer/cache/files
+    - $HOME/.composer/cache
