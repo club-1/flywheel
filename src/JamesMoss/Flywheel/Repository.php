@@ -3,6 +3,7 @@
 namespace JamesMoss\Flywheel;
 
 use JamesMoss\Flywheel\Index\IndexInterface;
+use JamesMoss\Flywheel\Index\StoredIndex;
 
 /**
  * Repository
@@ -102,6 +103,12 @@ class Repository
      */
     public function getIndexes()
     {
+        $indexes = StoredIndex::getPath($this->path);
+        if (is_dir($indexes)) {
+            if (filemtime($indexes) < filemtime($this->path)) {
+                $this->regenerateIndexes();
+            }
+        }
         return $this->indexes;
     }
 
@@ -237,6 +244,14 @@ class Repository
             throw new \Exception(sprintf('`%s` is not a valid document ID.', $id));
         }
         $previous = $this->findById($id);
+
+        $path = $this->getPathForDocument($id);
+        $data = get_object_vars($document);
+        $data = $this->formatter->encode($data);
+
+        if(!$this->write($path, $data)) {
+            return false;
+        }
         foreach ($this->indexes as $field => $index) {
             $oldFound = false;
             $newFound = false;
@@ -249,14 +264,6 @@ class Repository
             } elseif ($oldFound && $newFound) {
                 $index->update($document->getId(), $newVal, $oldVal);
             }
-        }
-
-        $path = $this->getPathForDocument($id);
-        $data = get_object_vars($document);
-        $data = $this->formatter->encode($data);
-
-        if(!$this->write($path, $data)) {
-            return false;
         }
 
         return $id;
@@ -312,6 +319,9 @@ class Repository
             $id = $doc;
             $doc = $this->findById($id);
         }
+        $path = $this->getPathForDocument($id);
+        $result = unlink($path);
+
         foreach ($this->indexes as $field => $index) {
             $found = false;
             $value = $doc ? $doc->getNestedProperty($field, $found) : null;
@@ -319,10 +329,7 @@ class Repository
                 $index->update($id, null, $value);
             }
         }
-
-        $path = $this->getPathForDocument($id);
-
-        return unlink($path);
+        return $result;
     }
 
     /**

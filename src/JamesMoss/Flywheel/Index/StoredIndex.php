@@ -9,6 +9,8 @@ use JamesMoss\Flywheel\Repository;
 
 abstract class StoredIndex implements IndexInterface
 {
+    const DIR_NAME = '.indexes';
+
     /** @var mixed $data                content of the index */
     protected $data = null;
 
@@ -36,7 +38,19 @@ abstract class StoredIndex implements IndexInterface
         $this->field = $field;
         $this->formatter = $formatter == null ? new JSON() : $formatter;
         $this->repository = $repository;
-        $this->path = $repository->addDirectory('.indexes') . DIRECTORY_SEPARATOR . "$field." . $this->formatter->getFileExtension();
+        $this->path = $repository->addDirectory(self::DIR_NAME) . DIRECTORY_SEPARATOR . "$field." . $this->formatter->getFileExtension();
+    }
+
+    /**
+     * Get the path of the directory where StoredIndex files are stored.
+     *
+     * @param string $prefix The base path of the StoredIndexes
+     *
+     * @return string
+     */
+    public static function getPath($prefix)
+    {
+        return $prefix . DIRECTORY_SEPARATOR . self::DIR_NAME;
     }
 
     /**
@@ -122,6 +136,7 @@ abstract class StoredIndex implements IndexInterface
         $result = fwrite($fp, $contents);
         flock($fp, LOCK_UN);
         fclose($fp);
+        touch(dirname($this->path));
 
         return $result !== false;
     }
